@@ -10,6 +10,28 @@ class Main extends Component {
     }
   }
 
+  
+getUrls = (url) => {
+    Promise.all([
+      fetch(`${url}`, {'method': 'GET'}, {'method': 'GET'}),
+    ])
+    .then(values => Promise.all(values.map(value => value.json())))
+    .then(data=>{
+      let urls =[url];
+
+      if (data[0]['links']['next']) {
+        url = data[0]['links']['next']['href'];
+        urls = [...urls, ...[url]]
+        this.setState({urls: [
+          ...this.state.urls,
+          ...urls
+        ]})
+
+        this.getUrls(url);
+      }
+    });
+}
+
   getContent = () => {
     const categories = [...this.state.categories];
     categories.map(element=> {
@@ -81,6 +103,7 @@ class Main extends Component {
 
   componentDidMount() {
     const urls =['https://devportalawards.org/jsonapi/node/nominees?filter[field_ongoing][value]=1&page[limit]=5&include=field_site_image&fields[file--file]=uri'];
+    this.getUrls(urls[0]);
 
     Promise.all([
       fetch('https://devportalawards.org/jsonapi/taxonomy_term/category', {'method': 'GET'}),
@@ -123,25 +146,6 @@ class Main extends Component {
           ]
         })
       })
-
-      const getUrls = (url) => {
-          Promise.all([
-            fetch(`${url}`, {'method': 'GET'}, {'method': 'GET'}),
-          ])
-          .then(values => Promise.all(values.map(value => value.json())))
-          .then(data=>{
-            if (data[0]['links']['next']) {
-              url = data[0]['links']['next']['href'];
-              urls.push(url)
-              getUrls(url);
-            }
-          });
-      }
-
-      getUrls(urls[0]);
-
-      this.setState({urls: urls})
-
   };
 
   render() {
