@@ -8,16 +8,20 @@ class Main extends Component {
         cards: [],
         urls: [],
     }
+
+    this.getUrls = this.getUrls.bind(this);
   }
 
   
 getUrls = (url) => {
+  console.log(url)
     Promise.all([
-      fetch(`${url}`, {'method': 'GET'}, {'method': 'GET'}),
+      fetch(`${url}`, {'method': 'GET'}),
     ])
     .then(values => Promise.all(values.map(value => value.json())))
     .then(data=>{
       let urls =[url];
+      let cards = [...this.state.cards];
 
       if (data[0]['links']['next']) {
         url = data[0]['links']['next']['href'];
@@ -28,9 +32,31 @@ getUrls = (url) => {
         ]})
 
         this.getUrls(url);
+    
       }
+
+      data[0]['data'].map((element, index)=> {
+        console.log(element)
+        if (element['attributes']['field_ongoing']) {
+          if (!cards.includes(element['attributes']['title'].toString())) {
+            cards = [
+              ...cards,
+              ...[
+                {
+                  imageurl: "https://devportalawards.org/" + data[0]['included'][index]['attributes']['uri']['url'],
+                  title: element['attributes']['title'].toString(),
+                  sitelink: element['attributes']['field_sitelink'][0]['uri'],
+                }
+              ]
+            ]
+          }
+        }
+      })
+
+      this.setState({cards: cards});
     });
 }
+
 
   getContent = () => {
     const categories = [...this.state.categories];
@@ -38,33 +64,10 @@ getUrls = (url) => {
       this.setState({cards: []});
       this.setState({urls: []})
 
-      if (element.isChecked === true) {
-      
-        Promise.all([
-          fetch(`https://devportalawards.org/jsonapi/node/nominees?filter[field_categories.drupal_internal__tid]=${element.id}&include=field_site_image&fields[file--file]=uri`, {'method': 'GET'}),
-        ])
-          .then(values => Promise.all(values.map(value => value.json())))
-          .then(data => {
-            let cards = [...this.state.cards];
 
-            data[0]['data'].map((element, index)=> {
-              if (element['attributes']['field_ongoing']) {
-                if (!cards.includes(element['attributes']['title'].toString())) {
-                  cards = [
-                    ...cards,
-                    ...[
-                      {
-                        imageurl: "https://devportalawards.org/" + data[0]['included'][index]['attributes']['uri']['url'],
-                        title: element['attributes']['title'].toString(),
-                        sitelink: element['attributes']['field_sitelink'][0]['uri'],
-                      }
-                    ]
-                  ]
-                }
-              }
-            })
-            this.setState({cards: cards});
-         }) 
+      if (element.isChecked === true) {
+
+        this.getUrls(`https://devportalawards.org/jsonapi/node/nominees?filter[field_categories.drupal_internal__tid]=${element.id}&include=field_site_image&fields[file--file]=uri`);
       } 
     })
   }
@@ -132,18 +135,6 @@ getUrls = (url) => {
                ]
             })
           })
-        })
-
-        this.setState({cards:[
-          ...this.state.cards,
-          ...data[1]['data'].map((element, index) => {
-            return {
-              imageurl: "https://devportalawards.org/" + data[1]['included'][index]['attributes']['uri']['url'],
-              title: element['attributes']['title'].toString(),
-              sitelink: element['attributes']['field_sitelink'][0]['uri'],
-            }
-          })
-          ]
         })
       })
   };
