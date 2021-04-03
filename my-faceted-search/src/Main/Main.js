@@ -14,14 +14,13 @@ class Main extends Component {
 
   
 getUrls = (url) => {
-  console.log(url)
     Promise.all([
       fetch(`${url}`, {'method': 'GET'}),
     ])
     .then(values => Promise.all(values.map(value => value.json())))
     .then(data=>{
       let urls =[url];
-      let cards = [...this.state.cards];
+
 
       if (data[0]['links']['next']) {
         url = data[0]['links']['next']['href'];
@@ -32,56 +31,65 @@ getUrls = (url) => {
         ]})
 
         this.getUrls(url);
-    
       }
-
-      data[0]['data'].map((element, index)=> {
-        console.log(element)
-        if (element['attributes']['field_ongoing']) {
-          if (!cards.includes(element['attributes']['title'].toString())) {
-            cards = [
-              ...cards,
-              ...[
-                {
-                  imageurl: "https://devportalawards.org/" + data[0]['included'][index]['attributes']['uri']['url'],
-                  title: element['attributes']['title'].toString(),
-                  sitelink: element['attributes']['field_sitelink'][0]['uri'],
-                }
-              ]
-            ]
-          }
-        }
-      })
-
-      this.setState({cards: cards});
-    });
+  });
 }
 
-
-  getContent = () => {
-    const categories = [...this.state.categories];
-    categories.map(element=> {
-      this.setState({cards: []});
-      this.setState({urls: []})
-
-
-      if (element.isChecked === true) {
-
-        this.getUrls(`https://devportalawards.org/jsonapi/node/nominees?filter[field_categories.drupal_internal__tid]=${element.id}&include=field_site_image&fields[file--file]=uri`);
-      } 
+getCards = (url) => {
+  Promise.all([
+    fetch(url, {'method': 'GET'})
+  ]) 
+  .then(values => Promise.all(values.map(value => value.json())))
+  .then(data=> {
+    let cards = [...this.state.cards];
+    
+    data[0]['data'].map((element, index)=> {
+      const arrayHasObject = cards.some(el => el.title === element['attributes']['title'].toString());
+      
+      if (!arrayHasObject ) {
+        cards = [
+          ...cards,
+          ...[
+            {
+              imageurl: "https://devportalawards.org/" + data[0]['included'][index]['attributes']['uri']['url'],
+              title: element['attributes']['title'].toString(),
+              sitelink: element['attributes']['field_sitelink'][0]['uri'],
+            }
+          ]
+        ]
+      }
     })
-  }
 
-  handleCheckChieldElement = (event) => {
-    let categories = this.state.categories
-    categories .forEach(element => {
-      if (element.name === event.target.value)
-        element.isChecked =  event.target.checked
-      })
-    this.setState({categories: categories})
+    this.setState({cards: cards});    
 
-    this.getContent();
- }
+  })
+}
+
+handleCheckChieldElement = (event) => {
+  this.setState({cards: []});
+  this.setState({urls: []})
+
+  const categories = [...this.state.categories]
+  categories .forEach(element => {
+    if (element.name === event.target.value)
+      element.isChecked =  event.target.checked
+
+      return categories
+    })
+
+    categories.map(element=> {
+     
+      if (element.isChecked === true) {
+        this.getUrls(`https://devportalawards.org/jsonapi/node/nominees?filter[field_categories.drupal_internal__tid]=${element.id}&filter[field_ongoing][value]=1&page[limit]=5&include=field_site_image&fields[file--file]=uri`);
+        this.getCards(`https://devportalawards.org/jsonapi/node/nominees?filter[field_categories.drupal_internal__tid]=${element.id}&filter[field_ongoing][value]=1&page[limit]=5&include=field_site_image&fields[file--file]=uri`)
+      } 
+   })
+
+   if (!categories.some(e => e.isChecked === true)) {
+    this.getCards('https://devportalawards.org/jsonapi/node/nominees?filter[field_ongoing][value]=1&page[limit]=5&include=field_site_image&fields[file--file]=uri')
+    this.getUrls('https://devportalawards.org/jsonapi/node/nominees?filter[field_ongoing][value]=1&page[limit]=5&include=field_site_image&fields[file--file]=uri');
+   }
+}
 
  handlePaginaTion = (e) => {
   let url = e.currentTarget.attributes.data.nodeValue;
@@ -107,13 +115,13 @@ getUrls = (url) => {
   componentDidMount() {
     const urls =['https://devportalawards.org/jsonapi/node/nominees?filter[field_ongoing][value]=1&page[limit]=5&include=field_site_image&fields[file--file]=uri'];
     this.getUrls(urls[0]);
-
     Promise.all([
       fetch('https://devportalawards.org/jsonapi/taxonomy_term/category', {'method': 'GET'}),
       fetch(urls[0], {'method': 'GET'})
     ])
       .then (values => Promise.all(values.map(value => value.json())))
       .then(data => {
+        let cards = [...this.state.cards];
         
         data[0]['data'].map((element, index) => {
           Promise.all([
@@ -121,21 +129,22 @@ getUrls = (url) => {
           ])
           .then(values => Promise.all(values.map(value => value.json())))
           .then(data=> {
-            this.setState({
-              categories: [
-                ...this.state.categories,
-                ...[
-                  {
-                    name: element['attributes']['name'],
-                    isChecked: false,
-                    id: element['attributes']['drupal_internal__tid'],
-                    disabled: data[0]['data'].length < 1 ? true : false,
-                }
-                ]
-               ]
+            this.setState({categories: [
+              ...this.state.categories,
+              ...[{
+                name: element['attributes']['name'],
+                isChecked: false,
+                id: element['attributes']['drupal_internal__tid'],
+                disabled: data[0]['data'].length < 1 ? true : false,
+              }]
+            ]
+
             })
           })
-        })
+      })
+
+      this.getCards(urls[0])
+
       })
   };
 
