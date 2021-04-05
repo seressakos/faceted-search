@@ -19,18 +19,31 @@ getUrls = (url) => {
     ])
     .then(values => Promise.all(values.map(value => value.json())))
     .then(data=>{
-      let urls =[url];
+
+      let urls =[{
+        'url': url,
+        'active': true,
+      }];
 
 
       if (data[0]['links']['next']) {
-        url = data[0]['links']['next']['href'];
-        urls = [...urls, ...[url]]
+        const newUrl = data[0]['links']['next']['href'];
+        urls = [...urls, ...[{
+          'url': newUrl,
+          'active': url === newUrl ? true : false,
+        }]];
+
+        urls.map((e, index) => {
+          e.id = `pagination--item-${index}`
+        })
+
         this.setState({urls: [
           ...this.state.urls,
           ...urls
         ]})
 
-        this.getUrls(url);
+
+        this.getUrls(newUrl);
       }
   });
 }
@@ -92,7 +105,20 @@ handleCheckChieldElement = (event) => {
 }
 
  handlePaginaTion = (e) => {
-  let url = e.currentTarget.attributes.data.nodeValue;
+  let id = e.currentTarget.id;
+  const urls = [...this.state.urls];
+  let url;
+
+  urls.map(element => {
+    if (id === element.id) {
+      url = element.url;
+      element.active = true;
+    } else {
+      element.active = false
+    }
+  })
+
+  this.setState({urls: urls})
   
   Promise.all([
     fetch(`${url}`, {'method': 'GET'}, {'method': 'GET'}),
@@ -115,6 +141,7 @@ handleCheckChieldElement = (event) => {
   componentDidMount() {
     const urls =['https://devportalawards.org/jsonapi/node/nominees?filter[field_ongoing][value]=1&page[limit]=5&include=field_site_image&fields[file--file]=uri'];
     this.getUrls(urls[0]);
+
     Promise.all([
       fetch('https://devportalawards.org/jsonapi/taxonomy_term/category', {'method': 'GET'}),
       fetch(urls[0], {'method': 'GET'})
@@ -165,11 +192,15 @@ handleCheckChieldElement = (event) => {
              <img src={card.imageurl}/>
              </div>
          })}
-         <div>
+         <ul>
            {this.state.urls.map((url, index)=>{
-             return <div key={url} data={url} onClick={(e)=>{this.handlePaginaTion(e)}}>{index + 1} </div>
+             return <li key={url.url}
+             id={url.id} 
+             className={url.active ? 'active' : null} 
+             onClick={(e)=>{this.handlePaginaTion(e)}}>{index + 1}
+             </li>
            })}
-         </div>
+         </ul>
       </div>
     )
   }
