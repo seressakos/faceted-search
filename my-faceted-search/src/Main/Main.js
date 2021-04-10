@@ -22,14 +22,30 @@ class Main extends Component {
     this.getUrls = this.getUrls.bind(this);
   }
 
+  getCards = (array, index, element, terms) => {
+    return  {
+        imageurl: "https://devportalawards.org/" + array[0]['included'][index]['attributes']['uri']['url'],
+        title: element['attributes']['title'].toString(),
+        sitelink: element['attributes']['field_sitelink'][0]['uri'],
+        category: element['relationships']['field_categories']['data'].map(e => {
+          let name;
+          terms.map(category => {
+            if (e.id === category.id) {
+            name = category.name;
+            }
+          })
+  
+          return name;
+        }),
+      }
+    } 
 
   getUrls = (url, currentUrl = url) => {
-
     Promise.all([
       fetch(`${url}`, {'method': 'GET'}),
     ])
       .then(values => Promise.all(values.map(value => value.json())))
-      .then(data=>{
+      .then(data=> {
         const terms = [...this.state.terms];
 
         if (url === currentUrl) {
@@ -42,22 +58,7 @@ class Main extends Component {
               cards = [
                 ...cards,
                 ...[
-                  {
-                    imageurl: "https://devportalawards.org/" + data[0]['included'][index]['attributes']['uri']['url'],
-                    title: element['attributes']['title'].toString(),
-                    sitelink: element['attributes']['field_sitelink'][0]['uri'],
-                    category: element['relationships']['field_categories']['data'].map(e => {
-                      let name;
-                      terms.map(category => {
-                        console.log(category)
-                        if (e.id === category.id) {
-                        name = category.name;
-                        }
-                      })
-      
-                      return name;
-                    }),
-                  }
+                  this.getCards(data, index, element, terms)
                 ]
               ]
             }
@@ -88,7 +89,6 @@ class Main extends Component {
               ...urls
             ]})
 
-
           this.getUrls(newUrl, currentUrl);
         }
       });
@@ -102,6 +102,7 @@ class Main extends Component {
     event.preventDefault();
     const searchText = this.state.searchtext
     let cards = [];
+    const terms = [...this.state.terms];
 
     if (searchText === '') {
       return
@@ -117,11 +118,7 @@ class Main extends Component {
         data[0]['data'].map((element, index) => {
           cards = [
             ...cards,
-            ...[{
-              imageurl: "https://devportalawards.org/" + data[0]['included'][index]['attributes']['uri']['url'],
-              title: element['attributes']['title'].toString(),
-              sitelink: element['attributes']['field_sitelink'][0]['uri'],
-            }]
+            ...[this.getCards(data, index, element, terms)]
           ]
         })
 
@@ -160,6 +157,7 @@ class Main extends Component {
     let id = e.currentTarget.id;
     const urls = [...this.state.urls];
     let url;
+    const terms = [...this.state.terms]
 
     urls.map(element => {
       if (id === element.id) {
@@ -179,11 +177,7 @@ class Main extends Component {
       .then(data=>{
         this.setState({cards:[
             ...data[0]['data'].map((element, index) => {
-              return {
-                imageurl: "https://devportalawards.org/" + data[0]['included'][index]['attributes']['uri']['url'],
-                title: element['attributes']['title'].toString(),
-                sitelink: element['attributes']['field_sitelink'][0]['uri'],
-              }
+              return this.getCards(data, index, element, terms)
             })
           ]
         })
@@ -192,8 +186,7 @@ class Main extends Component {
 
   componentDidMount() {
     const urls =['https://devportalawards.org/jsonapi/node/nominees?filter[field_ongoing][value]=1&page[limit]=5&include=field_site_image&fields[file--file]=uri'];
-    const terms = [];
-    
+   
     Promise.all([
       fetch('https://devportalawards.org/jsonapi/taxonomy_term/category', {'method': 'GET'}),
       fetch('https://devportalawards.org/jsonapi/taxonomy_term/category_group', {'method': 'GET'}),
@@ -232,16 +225,15 @@ class Main extends Component {
                      name: data['attributes']['name'],
                      id: data['attributes']['drupal_internal__tid'],
                      checked: false,
-                   })
-                }
-              })
-            })
-          }
-        })
+                   });
+                };
+              });
+            });
+          };
+        });
 
         this.setState({filters:categoryGroup})
         this.getUrls(urls[0]);
-
       })
   };
 
@@ -251,7 +243,6 @@ class Main extends Component {
         <form action="search">
             <input type="text" id="search" name="search" value={this.state.searchtext} onChange={(e)=>this.inputHandler(e)}/>
              <input type="submit" value="Submit" onClick={(e)=>this.submitHandler(e)}/>
-             
          </form> 
         <div className='filters'>
           {this.state.filters.map((e, index)=> {
@@ -271,11 +262,16 @@ class Main extends Component {
           return <div key={card.title}>
             <h2>{card.title}</h2>
             <img src={card.imageurl}/>
+            <div>
+              {card.category.map(taxname => {
+                return <p key={taxname}>{taxname}</p>
+              })}
+            </div>
           </div>
         }) : <h1>Lofasztsetalaltal</h1>}
   
         <ul>
-          {this.state.urls.map((url, index)=>{
+          {this.state.urls.map((url, index) => {
             return <li key={url.url}
                        id={url.id}
                        className={url.active ? 'active' : null}
