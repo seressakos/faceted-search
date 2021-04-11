@@ -17,6 +17,7 @@ class Main extends Component {
       cards: [],
       urls: [],
       searchtext: '',
+      loading: true,
     }
 
     this.getUrls = this.getUrls.bind(this);
@@ -91,6 +92,8 @@ class Main extends Component {
 
           this.getUrls(newUrl, currentUrl);
         }
+
+        this.setState({loading: false});
       });
   }
 
@@ -125,6 +128,7 @@ class Main extends Component {
         cards = cards.filter(card => card.title.toLowerCase().includes(searchText.toLowerCase()))
 
         this.setState({cards: cards});
+        this.setState({loading: false});
       })
   }
 
@@ -150,7 +154,18 @@ class Main extends Component {
     }
 
     this.getUrls(`https://devportalawards.org/jsonapi/node/nominees?filter[field_categories.drupal_internal__tid]=${event.target.id}&filter[field_ongoing][value]=1&page[limit]=5&include=field_site_image&fields[file--file]=uri`);
+  }
 
+  accordionHandler = (event) => {
+    const filters = this.state.filters;
+
+    filters.map((filter, index) => {
+      if (event.target.innerHTML === filter.title) {
+        filter.opened = !filters[index].opened;
+      }
+    });
+
+    this.setState({filters: filters})
   }
 
   handlePaginaTion = (e) => {
@@ -203,6 +218,7 @@ class Main extends Component {
               relatedCategories: element['relationships']['field_category']['data'].map(el => {
                 return el['id'];
               }),
+              opened: false,
               node: [],
           }]];
         });
@@ -247,7 +263,7 @@ class Main extends Component {
         <div className='filters'>
           {this.state.filters.map((e, index)=> {
             return <div key={e.title}>
-              <h3>{e.title}</h3>
+              <h3 onClick={(e)=>this.accordionHandler(e)} className={e.opened ? 'open' : 'close'}>{e.title}</h3>
               {e.node.map(el => {
                 return <div key={el.id}>
                   <input id={el.id} type="radio" value={el.name} checked={el.checked} name={el.name} onChange={this.handleCheckChieldElement}/>
@@ -257,20 +273,23 @@ class Main extends Component {
             </div>
             })}
         </div>
-        {this.state.cards.length > 0 ? 
-        this.state.cards.map(card=> {
-          return <div key={card.title}>
-            <h2>{card.title}</h2>
-            <img src={card.imageurl}/>
-            <div>
-              {card.category.map(taxname => {
-                return <p key={taxname}>{taxname}</p>
-              })}
-            </div>
-          </div>
-        }) : <h1>Lofasztsetalaltal</h1>}
-  
-        <ul>
+        {this.state.loading ? <div>Loading</div> :
+        <div>
+           {this.state.cards.length > 0 ? 
+           
+            this.state.cards.map(card=> {
+               return <div key={card.title}>
+                        <h2>{card.title}</h2>
+                        <img src={card.imageurl}/>
+                        <div>
+                             {card.category.map(taxname => {
+                               return <p key={taxname}>{taxname}</p>
+                             })}
+                           </div>
+                         </div>
+           }) : 
+           <h1>Lofasztsetalaltal</h1>}
+          <ul>
           {this.state.urls.map((url, index) => {
             return <li key={url.url}
                        id={url.id}
@@ -279,6 +298,7 @@ class Main extends Component {
             </li>
           })}
         </ul>
+        </div>}
       </div>
     )
   }
