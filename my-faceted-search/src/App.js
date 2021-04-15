@@ -1,12 +1,11 @@
 import React, { Component } from 'react';
-import './App.css';
-import Main from './Main/Main.js'
+import FacetBlock from './Block/FacetBlock.js'
 
 class App extends Component {
   render() {
     return (
       <div className="App">
-      <Main/>
+      <FacetBlock/>
       </div>
     );
   }
