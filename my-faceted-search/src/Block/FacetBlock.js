@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import Card from '../Node/Card';
-import Filters from '../Block/Filters'
-import Pagination from "./Pagination";
-import Loader from "../Elements/Loader";
+import Filters from './Filters'
+import Pagination from './Pagination'
+import Loader from '../Elements/Loader';
 
 class FacetBlock extends Component {
   constructor() {
@@ -24,7 +24,7 @@ class FacetBlock extends Component {
       imageurl: `${this.state.appRoot}${array[0]['included'][index]['attributes']['uri']['url']}`,
       title: element['attributes']['title'].toString(),
       sitelink: element['attributes']['field_sitelink'][0]['uri'],
-      owner: element['attributes']['field_owner']['value'],
+      owner: element['attributes']['field_owner'] ? element['attributes']['field_owner']['value'] : false,
       alias: element['attributes']['path']['alias'],
       alt: element['relationships']['field_site_image']['data'][0]['meta']['alt'],
       category: element['relationships']['field_categories']['data'].map(e => {
@@ -33,12 +33,12 @@ class FacetBlock extends Component {
           if (e.id === category.id) {
             name = category.name;
           }
-        })
+        });
 
         return name;
       }),
-    }
-  }
+    };
+  };
 
   contentFetcher = (url, currentUrl = url) => {
     this.setState({loading: true});
@@ -62,11 +62,11 @@ class FacetBlock extends Component {
               cards = [
                 ...cards,
                 ...[
-                  this.getCards(data, index, element, terms)
-                ]
+                  this.getCards(data, index, element, terms),
+                ],
               ]
             }
-          })
+          });
 
           this.setState({cards: cards});
         }
@@ -85,14 +85,14 @@ class FacetBlock extends Component {
 
           urls.map((e, index) => {
             e.id = `pagination--item-${index}`
-          })
+          });
 
           this.setState({
             urls: [
               ...this.state.urls,
-              ...urls
-            ]
-          })
+              ...urls,
+            ],
+          });
 
           this.contentFetcher(newUrl, currentUrl);
         }
@@ -102,22 +102,25 @@ class FacetBlock extends Component {
   }
 
   inputHandler = (event) => {
-    this.setState({searchtext: event.target.value})
-  }
+    this.setState({searchtext: event.target.value});
+  };
 
   submitHandler = (event) => {
-    this.setState({foundResults: true});
-    this.setState({loading: true});
     event.preventDefault();
-    const searchText = this.state.searchtext
+    const searchText = this.state.searchtext;
     let cards = [];
     const terms = [...this.state.terms];
 
     if (searchText === '') {
       return
     }
+    this.setState({loading: true});
+    this.setState({foundResults: true});
 
-    this.setState({urls: []});
+    this.setState({
+      loading: true,
+      foundResults: true
+    });
 
     Promise.all([
       fetch(`${this.state.appRoot}/jsonapi/node/nominees?filter[field_ongoing][value]=1&filter[status][value]=1&include=field_site_image&fields[file--file]=uri`, {'method': 'GET'}),
@@ -127,11 +130,11 @@ class FacetBlock extends Component {
         data[0]['data'].map((element, index) => {
           cards = [
             ...cards,
-            ...[this.getCards(data, index, element, terms)]
+            ...[this.getCards(data, index, element, terms)],
           ]
-        })
+        });
 
-        cards = cards.filter(card => card.title.toLowerCase().includes(searchText.toLowerCase()))
+        cards = cards.filter(card => card.title.toLowerCase().includes(searchText.toLowerCase()));
 
         if (cards.length < 1) {
           this.setState({foundResults: false})
@@ -140,7 +143,7 @@ class FacetBlock extends Component {
         this.setState({cards: cards});
         this.setState({loading: false});
       })
-  }
+  };
 
   handleCheckEvent = (event) => {
     this.setState({urls: []})
@@ -148,9 +151,8 @@ class FacetBlock extends Component {
     event.target.id == 'firstfilter' ?
       this.contentFetcher(`${this.state.appRoot}/jsonapi/node/nominees?filter[field_ongoing][value]=1&filter[status][value]=1&include=field_site_image&fields[file--file]=uri`)
     :
-      this.contentFetcher(`${this.state.appRoot}/jsonapi/node/nominees?filter[field_categories.drupal_internal__tid]=${event.target.id}&filter[field_ongoing][value]=1&filter[status][value]=1&include=field_site_image&fields[file--file]=uri`);
-
-  }
+      this.contentFetcher(`${this.state.appRoot}/jsonapi/node/nominees?filter[field_categories.drupal_internal__tid]=${event.target.id}&filter[field_ongoing][value]=1&filter[status][value]=1&include=field_site_image&fields[file--file]=uri`)
+  };
 
   accordionHandler = (event) => {
     const filters = this.state.filters;
@@ -162,7 +164,7 @@ class FacetBlock extends Component {
     });
 
     this.setState({filters: filters})
-  }
+  };
 
   handlePaginaTion = (e) => {
     let id = e.currentTarget.id;
@@ -191,11 +193,11 @@ class FacetBlock extends Component {
           cards: [
             ...data[0]['data'].map((element, index) => {
               return this.getCards(data, index, element, terms)
-            })
+            }),
           ]
-        })
-      })
-  }
+        });
+      });
+  };
 
   componentDidMount() {
     Promise.all([
@@ -204,7 +206,15 @@ class FacetBlock extends Component {
     ])
       .then(values => Promise.all(values.map(value => value.json())))
       .then(data => {
-        let filters = [...this.state.filters];
+        let filters = [{
+          'title': 'Default',
+          'node': [{
+            'id': 'firstfilter',
+            'checked': false,
+            'name': 'All categories',
+            'status': 'enabled',
+          }]
+        }];
 
         data[1]['data'].map(element => {
           filters = [
@@ -227,20 +237,10 @@ class FacetBlock extends Component {
                 id: data['id'],
               }
             })
-        })
-
-        filters[0] = {
-          'title': 'Default',
-          'node': [{
-            'id': 'firstfilter',
-            'checked': false,
-            'name': 'All categories',
-            'status': 'enabled'
-          }]
-        }
+        });
 
         filters.map((el, index) => {
-          if (index > 0) {
+          if (el.relatedCategories) {
             el.relatedCategories.map(e => {
               data[0]['data'].map((data, i) => {
                 if (e === data['id']) {
@@ -254,7 +254,7 @@ class FacetBlock extends Component {
           }
         });
 
-        this.setState({filters: filters})
+        this.setState({filters: filters});
         this.contentFetcher(`${this.state.appRoot}/jsonapi/node/nominees?filter[field_ongoing][value]=1&filter[status][value]=1&include=field_site_image&fields[file--file]=uri`);
       })
   };
