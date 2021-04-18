@@ -12,7 +12,7 @@ const Filters = ({ value, inputHandler, submitHandler, filters, accordionHandler
           <h3 onClick={(e)=>accordionHandler(e)} className={e.opened ? 'opened' : 'closed'}>{e.title}</h3>
           {e.node.map(el => {
             return <div key={el.id}>
-              <input id={el.id} type="radio" value={el.name} name="facet-input" onChange={(e)=>handleCheckEvent(e)}/>
+              <input id={el.id} type="radio" value={el.name} name="facet-input" checked={el.checked} onChange={(e)=>handleCheckEvent(e)}/>
               <label>{el.name}</label>
             </div>
           })}

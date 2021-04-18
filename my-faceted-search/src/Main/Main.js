@@ -139,11 +139,7 @@ class Main extends Component {
 
     filters.map(filter => {
       filter.node.map(e => {
-        if (event.target.id == e.id) {
-          e.checked = true;
-        } else {
-          e.checked = false;
-        }
+        e.checked = event.target.id == e.id;
       })
     })
 

@@ -21,7 +21,7 @@ class FacetBlock extends Component {
 
   getCards = (array, index, element, terms) => {
     return {
-      imageurl: `${this.state.appRoot}${array[0]['included'][index]['attributes']['uri']['url']}`,
+      imageurl: `${this.state.appRoot}/${array[0]['included'][index]['attributes']['uri']['url']}`,
       title: element['attributes']['title'].toString(),
       sitelink: element['attributes']['field_sitelink'][0]['uri'],
       owner: element['attributes']['field_owner'] ? element['attributes']['field_owner']['value'] : false,
@@ -146,7 +146,25 @@ class FacetBlock extends Component {
   };
 
   handleCheckEvent = (event) => {
-    this.setState({urls: []})
+    this.setState({urls: []});
+    const filters = this.state.filters;
+
+    filters.map(filter => {
+      filter.node.map(e => {
+        console.log(e.id, event.target.id)
+        e.checked = e.id == event.target.id
+      })
+    })
+
+    this.setState({filters : filters})
+
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('filter', event.target.id);
+    window.history.replaceState(
+        null,
+        document.title,
+        `${window.location.origin}${window.location.pathname}?${urlParams.toString()}`,
+    )
 
     event.target.id == 'firstfilter' ?
       this.contentFetcher(`${this.state.appRoot}/jsonapi/node/nominees?filter[field_ongoing][value]=1&filter[status][value]=1&include=field_site_image&fields[file--file]=uri`)
@@ -185,7 +203,7 @@ class FacetBlock extends Component {
     this.setState({urls: urls})
 
     Promise.all([
-      fetch(`${url}`, {'method': 'GET'}, {'method': 'GET'}),
+      fetch(`${url}`, {'method': 'GET'}),
     ])
       .then(values => Promise.all(values.map(value => value.json())))
       .then(data => {
@@ -200,6 +218,11 @@ class FacetBlock extends Component {
   };
 
   componentDidMount() {
+    const urlParams = new URLSearchParams(window.location.search);
+    let baseFilter = urlParams.get('filter') ? urlParams.get('filter') : '';
+
+    console.log(baseFilter)
+
     Promise.all([
       fetch(`${this.state.appRoot}/jsonapi/taxonomy_term/category`, {'method': 'GET'}),
       fetch(`${this.state.appRoot}/jsonapi/taxonomy_term/category_group`, {'method': 'GET'}),
@@ -209,10 +232,10 @@ class FacetBlock extends Component {
         let filters = [{
           'title': 'Default',
           'node': [{
-            'id': 'firstfilter',
-            'checked': false,
-            'name': 'All categories',
-            'status': 'enabled',
+            id: 'firstfilter',
+            checked: false,
+            name: 'All categories',
+            status: 'enabled',
           }]
         }];
 
@@ -247,6 +270,7 @@ class FacetBlock extends Component {
                   el.node.push({
                     name: data['attributes']['name'],
                     id: data['attributes']['drupal_internal__tid'],
+                    checked: false,
                   });
                 }
               });
@@ -254,8 +278,19 @@ class FacetBlock extends Component {
           }
         });
 
+        if (baseFilter === '' || baseFilter === 'firstfilter') {
+          this.contentFetcher(`${this.state.appRoot}/jsonapi/node/nominees?filter[field_ongoing][value]=1&filter[status][value]=1&include=field_site_image&fields[file--file]=uri`);
+        } else {
+          this.contentFetcher(`${this.state.appRoot}/jsonapi/node/nominees?filter[field_categories.drupal_internal__tid]=${baseFilter}&filter[field_ongoing][value]=1&filter[status][value]=1&include=field_site_image&fields[file--file]=uri`)
+        }
+
+        filters.map(filter => {
+          filter.node.map(e => {
+            e.checked = e.id == baseFilter
+          })
+        })
+
         this.setState({filters: filters});
-        this.contentFetcher(`${this.state.appRoot}/jsonapi/node/nominees?filter[field_ongoing][value]=1&filter[status][value]=1&include=field_site_image&fields[file--file]=uri`);
       })
   };
 
